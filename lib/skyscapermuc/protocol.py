@@ -10,9 +10,7 @@ from twisted.words.protocols.jabber.xmlstream import IQ
 from wokkel.xmppim import MessageProtocol, PresenceClientProtocol
 from wokkel.xmppim import Presence
 
-from chatroom import ChatRoom, ChatUser
-
-chatrooms = {}
+import chatroom
 
 class TranslateMUCMessageProtocol(MessageProtocol):
 
@@ -24,12 +22,11 @@ class TranslateMUCMessageProtocol(MessageProtocol):
         super(TranslateMUCMessageProtocol, self).connectionInitialized()
         log.msg("Connected!")
 
-        global chatrooms
-        chatrooms = {}
+        chatroom.chatrooms = {}
 
     def connectionLost(self, reason):
         log.msg('Disconnected!')
-        self.chatrooms = {}
+        chatroom.chatrooms = {}
 
     def sendOneMessage(self, recipient, room_name, sender, content):
         msg = domish.Element((None, "message"))
@@ -51,7 +48,7 @@ class TranslateMUCMessageProtocol(MessageProtocol):
             tojid = JID(msg['to'])
 
             room_name = tojid.user
-            room = chatrooms[room_name]
+            room = chatroom.chatrooms[room_name]
             nick = room.userNick(msg['from'])
 
             log.msg("Room name:  %s, user nick:  %s"
@@ -107,9 +104,8 @@ class TranslateMUCPresenceProtocol(PresenceClientProtocol):
         self.send(p)
 
     def presenceBroadcast(self, room_name, nick, presenceType=None):
-        global chatrooms
-        if chatrooms.has_key(room_name):
-            room = chatrooms[room_name]
+        if chatroom.chatrooms.has_key(room_name):
+            room = chatroom.chatrooms[room_name]
             for r in (u.jid for u in room.users):
                 rjid = JID(r)
                 self.sendOnePresence(room_name, nick, 'participant', rjid,
@@ -128,10 +124,10 @@ class TranslateMUCPresenceProtocol(PresenceClientProtocol):
                 % (room_name, tojid.resource, tojid.host))
 
         assert tojid.host == self.jid
-        global chatrooms
-        if room_name not in chatrooms:
-            chatrooms[room_name] = ChatRoom(room_name)
-        chatrooms[room_name].add(ChatUser(tojid.resource, fromjid.full()))
+        if room_name not in chatroom.chatrooms:
+            chatroom.chatrooms[room_name] = chatroom.ChatRoom(room_name)
+        chatroom.chatrooms[room_name].add(chatroom.ChatUser(
+                tojid.resource, fromjid.full()))
 
         self.presenceBroadcast(room_name, tojid.resource)
 
@@ -151,6 +147,5 @@ class TranslateMUCPresenceProtocol(PresenceClientProtocol):
 
         self.presenceBroadcast(room_name, tojid.resource, 'unavailable')
 
-        global chatrooms
-        room = chatrooms[room_name]
+        room = chatroom.chatrooms[room_name]
         del room[fromjid.full()]
