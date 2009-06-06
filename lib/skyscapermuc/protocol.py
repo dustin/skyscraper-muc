@@ -66,7 +66,10 @@ class TranslateMUCMessageProtocol(MessageProtocol):
             log.msg("Room name:  %s, user nick:  %s"
                     % (room.name, user.nick))
 
-            wfd = defer.waitForDeferred(room.translate(user.language, body))
+            wfd = defer.waitForDeferred(room.translate(self.xmlstream,
+                                                       self.jid,
+                                                       'translate.skyscraper.im',
+                                                       user.language, body))
             yield wfd
 
             translations = wfd.getResult()

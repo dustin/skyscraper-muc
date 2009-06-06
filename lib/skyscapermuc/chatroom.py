@@ -2,8 +2,29 @@ from collections import defaultdict
 
 from twisted.internet import defer
 from twisted.python import log
+from twisted.words.protocols.jabber.xmlstream import IQ
+from wokkel import data_form
 
 chatrooms = {}
+
+class TranslationMessage(IQ):
+    def __init__(self, stream, fromjid, tojid, inlang, out_langs, text):
+        super(TranslationMessage, self).__init__(stream, 'set')
+
+        self['from'] = fromjid
+        self['to'] = tojid
+
+        command = self.addElement(('http://jabber.org/protocol/commands',
+                                  "command"))
+        command['node'] = 'translate'
+        command['status'] = 'executing'
+
+        form = data_form.Form('submit')
+        form.addField(data_form.Field(var='in', value=inlang))
+        form.addField(data_form.Field(var='out', values=out_langs))
+        form.addField(data_form.Field(var='text', value=text))
+
+        command.addChild(form.toElement())
 
 class ChatUser(object):
 
@@ -49,16 +70,30 @@ class ChatRoom(object):
                 rv = u.nick
         return rv
 
-    def translate(self, language, message):
+    def translate(self, stream, myjid, transjid, language, message):
         """Translate a message for all possible target languages"""
-        rv = {}
 
         log.msg("Translating %s from %s" % (message, language))
 
-        for l in self.targets.keys():
-            if l == language:
-                rv[l] = message
-            else:
-                rv[l] = message + " (translated to " + l + ")"
+        targets = [l for l in self.targets.keys() if l != language]
 
-        return defer.succeed(rv)
+        def handleResponse(res):
+            log.msg("Handling a response")
+            cmd = res.firstChildElement()
+            assert cmd.name == 'command'
+            assert cmd['node'] == 'translate'
+            form = data_form.Form.fromElement(
+                [e for e in cmd.elements('jabber:x:data', 'x')][0])
+
+            rv = form.getValues()
+            rv[language] = message
+
+            log.msg("Translation response: %s" % rv)
+
+            return defer.succeed(rv)
+
+        m = TranslationMessage(stream, myjid, transjid, language,
+                               targets, message)
+
+        return m.send().addCallback(handleResponse)
+
