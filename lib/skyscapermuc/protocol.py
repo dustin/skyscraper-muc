@@ -1,8 +1,9 @@
 import time
+import copy
 from collections import defaultdict
 
 from twisted.python import log
-from twisted.internet import protocol, reactor, threads
+from twisted.internet import protocol, reactor, threads, defer
 from twisted.words.xish import domish
 from twisted.words.protocols.jabber.jid import JID
 from twisted.words.protocols.jabber.xmlstream import IQ
@@ -53,6 +54,7 @@ class TranslateMUCMessageProtocol(MessageProtocol):
             log.msg("Setting user language to %s" % args)
             user.language=args
 
+    @defer.deferredGenerator
     def translateAndSend(self, body, msg):
         tojid = JID(msg['to'])
 
@@ -64,7 +66,21 @@ class TranslateMUCMessageProtocol(MessageProtocol):
             log.msg("Room name:  %s, user nick:  %s"
                     % (room.name, user.nick))
 
-            self.broadcastMessage(room, user.nick, msg.body)
+            wfd = defer.waitForDeferred(room.translate(user.language, body))
+            yield wfd
+
+            translations = wfd.getResult()
+
+            log.msg("Translations:  %s" % translations)
+
+            targets = room.targets
+
+            for lang, text in translations.iteritems():
+                log.msg("Doing %s translation:  %s" % (lang, text))
+                for u in targets[lang]:
+                    log.msg("  Recipient:  %s" % u.jid)
+                    self.sendOneMessage(u.jid, room.name, user.nick, text)
+
         else:
             self.sendOneMessage(user.jid, room.name, '*system*',
                                 "You must specify a language before speaking.\n\n"

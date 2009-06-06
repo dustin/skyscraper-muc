@@ -1,3 +1,8 @@
+from collections import defaultdict
+
+from twisted.internet import defer
+from twisted.python import log
+
 chatrooms = {}
 
 class ChatUser(object):
@@ -25,12 +30,13 @@ class ChatRoom(object):
             del self.members[jid]
 
     @property
-    def nicks(self):
-        return sorted(u.nick for u in self.members.values())
-
-    @property
-    def languages(self):
-        return set(u.language for u in self.members.values())
+    def targets(self):
+        """Return a dict of language -> lists of users"""
+        rv = defaultdict(list)
+        for u in self.members.values():
+            if u.language:
+                rv[u.language].append(u)
+        return rv
 
     @property
     def users(self):
@@ -42,3 +48,17 @@ class ChatRoom(object):
             if u.jid == jid:
                 rv = u.nick
         return rv
+
+    def translate(self, language, message):
+        """Translate a message for all possible target languages"""
+        rv = {}
+
+        log.msg("Translating %s from %s" % (message, language))
+
+        for l in self.targets.keys():
+            if l == language:
+                rv[l] = message
+            else:
+                rv[l] = message + " (translated to " + l + ")"
+
+        return defer.succeed(rv)
