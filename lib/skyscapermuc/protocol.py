@@ -53,6 +53,24 @@ class TranslateMUCMessageProtocol(MessageProtocol):
             log.msg("Setting user language to %s" % args)
             user.language=args
 
+    def translateAndSend(self, body, msg):
+        tojid = JID(msg['to'])
+
+        room_name = tojid.user
+        room = chatroom.chatrooms[room_name]
+        user = room.members[msg['from']]
+
+        if user.language:
+            log.msg("Room name:  %s, user nick:  %s"
+                    % (room.name, user.nick))
+
+            self.broadcastMessage(room, user.nick, msg.body)
+        else:
+            self.sendOneMessage(user.jid, room.name, '*system*',
+                                "You must specify a language before speaking.\n\n"
+                                "For example:\n"
+                                "/lang en")
+
     def onMessage(self, msg):
         log.msg("Got a message")
         if msg.getAttribute("type") == 'groupchat' and hasattr(msg, "body") and msg.body:
@@ -60,16 +78,7 @@ class TranslateMUCMessageProtocol(MessageProtocol):
             if body_text[0] == '/':
                 self.processCommand(body_text[1:], msg)
             else:
-                tojid = JID(msg['to'])
-
-                room_name = tojid.user
-                room = chatroom.chatrooms[room_name]
-                nick = room.userNick(msg['from'])
-
-                log.msg("Room name:  %s, user nick:  %s"
-                        % (room.name, nick))
-
-                self.broadcastMessage(room, nick, msg.body)
+                self.translateAndSend(body_text, msg)
 
 class TranslateMUCPresenceProtocol(PresenceClientProtocol):
 
