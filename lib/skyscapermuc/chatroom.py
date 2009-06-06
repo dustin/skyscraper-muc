@@ -90,7 +90,7 @@ class ChatRoom(object):
 
             log.msg("Translation response: %s" % rv)
 
-            return defer.succeed(rv)
+            return rv
 
         m = TranslationMessage(stream, myjid, transjid, language,
                                targets, message)
