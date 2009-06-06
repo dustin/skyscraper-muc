@@ -1,0 +1,5 @@
+*.pyc
+*~
+*#
+_trial_temp
+muc.tac
