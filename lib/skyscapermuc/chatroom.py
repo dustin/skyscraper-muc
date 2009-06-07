@@ -35,6 +35,9 @@ class ChatUser(object):
         self.jid = jid
         self.language = language
 
+    def __repr__(self):
+        return "<ChatUser %s (%s): lang=%s>" % (self.jid, self.nick, self.language)
+
 class ChatRoom(object):
 
     def __init__(self, name):
