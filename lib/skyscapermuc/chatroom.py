@@ -80,8 +80,9 @@ class ChatRoom(object):
 
         targets = [l for l in self.targets.keys() if l != language]
 
+        log.msg("Targets:  %s" % targets)
+
         def handleResponse(res):
-            log.msg("Handling a response")
             cmd = res.firstChildElement()
             assert cmd.name == 'command'
             assert cmd['node'] == 'translate'
@@ -100,3 +101,51 @@ class ChatRoom(object):
 
         return m.send().addCallback(handleResponse)
 
+
+def present(prot, presence):
+    global chatrooms
+
+    fromjid = JID(presence['from'])
+    tojid = JID(presence['to'])
+
+    log.msg("Available from:  %s to %s (my jid is %s)"
+            % (fromjid, tojid, prot.jid))
+
+    room_name = tojid.user
+
+    log.msg("Room name:  %s, user nick:  %s, host: %s"
+            % (room_name, tojid.resource, tojid.host))
+
+    assert tojid.host == prot.jid
+    if room_name not in chatrooms:
+        chatrooms[room_name] = ChatRoom(room_name)
+    chatrooms[room_name].add(ChatUser(
+            tojid.resource, fromjid.full()))
+
+    prot.presenceBroadcast(room_name, tojid.resource)
+
+    # Send The current list to the new user
+    for u in chatrooms[room_name].users:
+        prot.sendOnePresence(room_name, u.nick, 'participant',
+                             fromjid, None)
+
+def unavailable(prot, presence):
+    global chatrooms
+
+    fromjid = JID(presence['from'])
+    tojid = JID(presence['to'])
+
+    log.msg("Unavailable from:  %s to %s (my jid is %s)"
+            % (fromjid, tojid, prot.jid))
+
+    room_name = tojid.user
+
+    log.msg("Room name:  %s, user nick:  %s, host: %s"
+            % (room_name, tojid.resource, tojid.host))
+
+    assert tojid.host == prot.jid
+
+    prot.presenceBroadcast(room_name, tojid.resource, 'unavailable')
+
+    room = chatrooms[room_name]
+    del room[fromjid.full()]

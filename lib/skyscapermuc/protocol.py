@@ -151,44 +151,12 @@ class TranslateMUCPresenceProtocol(PresenceClientProtocol):
             room = chatroom.chatrooms[room_name]
             for r in (u.jid for u in room.users):
                 rjid = JID(r)
+                log.msg("*** Sending presence of %s to %s" % (nick, r))
                 self.sendOnePresence(room_name, nick, 'participant', rjid,
                                      presenceType)
 
     def _onPresenceAvailable(self, presence):
-        fromjid = JID(presence['from'])
-        tojid = JID(presence['to'])
-
-        log.msg("Available from:  %s to %s (my jid is %s)"
-                % (fromjid, tojid, self.jid))
-
-        room_name = tojid.user
-
-        log.msg("Room name:  %s, user nick:  %s, host: %s"
-                % (room_name, tojid.resource, tojid.host))
-
-        assert tojid.host == self.jid
-        if room_name not in chatroom.chatrooms:
-            chatroom.chatrooms[room_name] = chatroom.ChatRoom(room_name)
-        chatroom.chatrooms[room_name].add(chatroom.ChatUser(
-                tojid.resource, fromjid.full()))
-
-        self.presenceBroadcast(room_name, tojid.resource)
+        chatroom.present(self, presence)
 
     def _onPresenceUnavailable(self, presence):
-        fromjid = JID(presence['from'])
-        tojid = JID(presence['to'])
-
-        log.msg("Unavailable from:  %s to %s (my jid is %s)"
-                % (fromjid, tojid, self.jid))
-
-        room_name = tojid.user
-
-        log.msg("Room name:  %s, user nick:  %s, host: %s"
-                % (room_name, tojid.resource, tojid.host))
-
-        assert tojid.host == self.jid
-
-        self.presenceBroadcast(room_name, tojid.resource, 'unavailable')
-
-        room = chatroom.chatrooms[room_name]
-        del room[fromjid.full()]
+        chatroom.unavailable(self, presence)
