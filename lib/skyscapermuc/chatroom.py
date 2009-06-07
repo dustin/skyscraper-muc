@@ -3,6 +3,8 @@ from collections import defaultdict
 from twisted.internet import defer
 from twisted.python import log
 from twisted.words.protocols.jabber.xmlstream import IQ
+from twisted.words.protocols.jabber.jid import JID
+
 from wokkel import data_form
 
 chatrooms = {}
@@ -44,7 +46,8 @@ class ChatRoom(object):
         return len(self.members)
 
     def add(self, user):
-        self.members[user.jid] = user
+        if user.jid not in self.members:
+            self.members[user.jid] = user
 
     def __delitem__(self, jid):
         if jid in self.members:
