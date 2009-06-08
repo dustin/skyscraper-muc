@@ -2,6 +2,7 @@ from collections import defaultdict
 
 from twisted.internet import defer
 from twisted.python import log
+from twisted.words.xish import domish
 from twisted.words.protocols.jabber.xmlstream import IQ
 from twisted.words.protocols.jabber.jid import JID
 
@@ -89,9 +90,9 @@ class ChatRoom(object):
             cmd = res.firstChildElement()
             assert cmd.name == 'command'
             assert cmd['node'] == 'translate'
-            form = data_form.Form.fromElement(
-                [e for e in cmd.elements('jabber:x:data', 'x')][0])
-
+            forms = [e for e in
+                     domish.generateElementsQNamed(cmd.children, 'jabber:x:data', 'x')]
+            form = data_form.Form.fromElement(forms[0])
             rv = form.getValues()
             rv[language] = message
 
