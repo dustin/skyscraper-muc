@@ -100,10 +100,17 @@ class ChatRoom(object):
 
             return rv
 
+        def onErr(e):
+            log.err()
+            rv = {}
+            for t in targets:
+                rv[t] = "%s (failed translation from %s)" % (message, language)
+            return rv
+
         m = TranslationMessage(stream, myjid, transjid, language,
                                targets, message)
 
-        return m.send().addCallback(handleResponse)
+        return m.send().addCallback(handleResponse).addErrback(onErr)
 
 
 def present(prot, presence):
