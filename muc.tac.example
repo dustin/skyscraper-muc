@@ -1,0 +1,29 @@
+import sys
+sys.path.insert(0, "lib/skyscapermuc")
+sys.path.insert(0, "lib/wokkel")
+sys.path.insert(0, "lib")
+
+from twisted.application import service
+from twisted.words.protocols.jabber import jid
+from wokkel.component import Component
+from wokkel.disco import DiscoHandler
+
+from protocol import TranslateMUCMessageProtocol, TranslateMUCPresenceProtocol
+
+application = service.Application("skyscraper-muc")
+
+j = jid.internJID("conference.skyscraper.im")
+
+xmppcomponent = Component("localhost", 8889,
+                          "conference.skyscraper.im", "yourpasswordhere")
+xmppcomponent.logTraffic = True
+protocols = [TranslateMUCMessageProtocol,
+             TranslateMUCPresenceProtocol]
+
+for p in protocols:
+    handler=p(j)
+    handler.setHandlerParent(xmppcomponent)
+
+DiscoHandler().setHandlerParent(xmppcomponent)
+
+xmppcomponent.setServiceParent(application)
