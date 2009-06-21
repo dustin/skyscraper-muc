@@ -106,11 +106,14 @@ class ChatRoom(object):
                 rv[t] = "%s (failed translation from %s)" % (message, language)
             return rv
 
-        m = TranslationMessage(stream, myjid, transjid, language,
-                               targets, message)
+        if targets:
+            m = TranslationMessage(stream, myjid, transjid, language,
+                                   targets, message)
 
-        return m.send().addCallback(handleResponse).addErrback(onErr)
-
+            return m.send().addCallback(handleResponse).addErrback(onErr)
+        else:
+            log.msg("No target translations.  Returning directly.")
+            return defer.succeed({language: message})
 
 def present(prot, presence):
     global chatrooms
