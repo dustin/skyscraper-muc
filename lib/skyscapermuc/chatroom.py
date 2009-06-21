@@ -23,7 +23,8 @@ class TranslationMessage(IQ):
 
         form = data_form.Form('submit')
         form.addField(data_form.Field(var='in', value=inlang))
-        form.addField(data_form.Field(var='out', values=out_langs))
+        form.addField(data_form.Field(fieldType='text-multi',
+                                      var='out', values=out_langs))
         form.addField(data_form.Field(var='text', value=text))
 
         command.addChild(form.toElement())
